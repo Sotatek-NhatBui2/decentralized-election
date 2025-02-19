@@ -1,8 +1,8 @@
 # Decentralized Election System
 
-## Requirements
+## Election contract
 
-### Basic
+### Requirements
 
 - The contract owner can create a new election with multiple candidates.
 - Registered voters can cast their votes.
@@ -24,3 +24,29 @@
 - Result Retrieval:
   - Anyone can check the current leading candidate of the specific election at any time.
   - After voting ends, the final results should be available.
+
+## Vesting contract
+
+### Objective
+
+- Part 1: Upgrade the Election Contract
+  - Integrate an ERC20 token reward that will be sent to the vesting contract after the election ends.
+  - Implement logic to split the reward if multiple candidates tie.
+  - Ensure that rewards are locked in a vesting contract.
+- Part 2: Implement the Token Vesting Contract
+  - The vesting contract should:
+    - Unlock 10% of the reward each month.
+    - Allow winners to claim their unlocked tokens.
+    - Prevent claiming before the unlock period.
+
+### Requirements
+
+- Access Control:
+  - Only allowed address can add a new vesting schedule.
+- Beneficiary:
+  - A beneficiary needs to be a winner of the election.
+- VestingTracking:
+  - Use structs and mappings to store vesting data.
+  - Emit an event when a new vesting is added or user claims tokens.
+- Vesting query:
+  - Users can check for claimable amount, unlocked amount and claimed amount of their assets.

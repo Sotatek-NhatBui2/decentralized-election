@@ -1,8 +1,0 @@
-{
-  "election": {
-    "votingTokenName": "Voting Token",
-    "votingTokenSymbol": "VOTE",
-    "initialSupply": "1000000000000000000000000",
-    "requiredTokenBalance": "1000000000000000000"
-  }
-}

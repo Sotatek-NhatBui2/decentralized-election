@@ -5,7 +5,7 @@ import {
   time,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 function getTimestamp(date: Date) {
   return Math.round(date.getTime() / 1000);
@@ -33,11 +33,12 @@ describe("Election", async function () {
       INITIAL_SUPPLY
     );
 
-    // Deploy Election
+    // Deploy Election as upgradeable
     const Election = await ethers.getContractFactory("Election");
-    const election = await Election.deploy(
-      await votingToken.getAddress(),
-      REQUIRED_TOKEN_BALANCE
+    const election = await upgrades.deployProxy(
+      Election,
+      [await votingToken.getAddress(), REQUIRED_TOKEN_BALANCE],
+      { initializer: "initialize" }
     );
 
     return { votingToken, election };

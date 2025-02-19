@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Election is Ownable, ReentrancyGuard {
+contract Election is
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     struct Candidate {
         address candidateAddress;
         address[] voters;
@@ -26,7 +30,6 @@ contract Election is Ownable, ReentrancyGuard {
 
     IERC20 public votingToken;
     uint256 public requiredTokenBalance;
-
     uint256 public currentElectionId;
     mapping(uint256 => ElectionDetails) public elections;
 
@@ -46,12 +49,16 @@ contract Election is Ownable, ReentrancyGuard {
         uint256 winningCandidateIndex
     );
 
-    constructor(
+    function initialize(
         address _votingToken,
         uint256 _requiredTokenBalance
-    ) Ownable(msg.sender) {
+    ) public initializer {
+        __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
+
         votingToken = IERC20(_votingToken);
         requiredTokenBalance = _requiredTokenBalance;
+        currentElectionId = 0;
     }
 
     function createElection(
