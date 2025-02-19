@@ -22,6 +22,7 @@ describe("Election", async function () {
   const INITIAL_SUPPLY = ethers.parseEther("1000000"); // 1 million tokens
   const REQUIRED_TOKEN_BALANCE = ethers.parseEther("1"); // 1 token required to vote
   const CANDIDATE_ADDRESSES = [acc6.address, acc7.address, acc8.address];
+  const CANDIDATE_NAMES = ["Candidate 6", "Candidate 7", "Candidate 8"]; // Add candidate names
 
   // Fixture that deploys both contracts
   async function deployElectionFixture() {
@@ -53,7 +54,12 @@ describe("Election", async function () {
     // Create election
     const startTime = getTimestamp(new Date()) + 3600; // 1 hour from now
     const endTime = startTime + 86400; // 24 hours from start
-    await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+    await election.createElection(
+      CANDIDATE_NAMES,
+      CANDIDATE_ADDRESSES,
+      startTime,
+      endTime
+    );
 
     // Mint tokens to accounts
     for (const acc of accounts) {
@@ -174,7 +180,12 @@ describe("Election", async function () {
       const startTime = getTimestamp(new Date()) + 3600;
       const endTime = startTime + 86400;
 
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       // Check election details
       const electionId = await election.currentElectionId();
@@ -183,6 +194,7 @@ describe("Election", async function () {
       // Check candidates
       for (let i = 0; i < CANDIDATE_ADDRESSES.length; i++) {
         const candidate = await election.getCandidate(electionId, i);
+        expect(candidate.name).to.equal(CANDIDATE_NAMES[i]);
         expect(candidate.candidateAddress).to.equal(CANDIDATE_ADDRESSES[i]);
         expect(candidate.voters.length).to.equal(0);
       }
@@ -196,6 +208,7 @@ describe("Election", async function () {
 
       await expect(
         election.createElection(
+          ["Name 1", "Name 2"],
           [acc1.address, acc1.address],
           startTime,
           endTime
@@ -211,11 +224,28 @@ describe("Election", async function () {
 
       await expect(
         election.createElection(
+          ["Name 1", "Name 2"],
           [acc1.address, ethers.ZeroAddress],
           startTime,
           endTime
         )
       ).to.be.revertedWith("Invalid candidate address");
+    });
+
+    it("Should not allow empty candidate name", async function () {
+      const { election } = await loadFixture(deployElectionFixture);
+
+      const startTime = getTimestamp(new Date()) + 3600;
+      const endTime = startTime + 86400;
+
+      await expect(
+        election.createElection(
+          ["Name 1", ""],
+          [acc1.address, acc2.address],
+          startTime,
+          endTime
+        )
+      ).to.be.revertedWith("Empty candidate name");
     });
 
     it("Should not create an election if not owner", async function () {
@@ -227,7 +257,12 @@ describe("Election", async function () {
       await expect(
         election
           .connect(acc1)
-          .createElection(CANDIDATE_ADDRESSES, startTime, endTime)
+          .createElection(
+            CANDIDATE_NAMES,
+            CANDIDATE_ADDRESSES,
+            startTime,
+            endTime
+          )
       ).to.be.revertedWithCustomError(election, "OwnableUnauthorizedAccount");
     });
 
@@ -238,7 +273,12 @@ describe("Election", async function () {
       const endTime = getTimestamp(new Date()) + 86400; // 24 hours from now
 
       await expect(
-        election.createElection(CANDIDATE_ADDRESSES, startTime, endTime)
+        election.createElection(
+          CANDIDATE_NAMES,
+          CANDIDATE_ADDRESSES,
+          startTime,
+          endTime
+        )
       ).to.be.revertedWith("Start time must be in the future");
     });
 
@@ -249,7 +289,12 @@ describe("Election", async function () {
       const endTime = startTime - 1; // 1 second before start time
 
       await expect(
-        election.createElection(CANDIDATE_ADDRESSES, startTime, endTime)
+        election.createElection(
+          CANDIDATE_NAMES,
+          CANDIDATE_ADDRESSES,
+          startTime,
+          endTime
+        )
       ).to.be.revertedWith("End time must be after start time");
     });
 
@@ -262,10 +307,27 @@ describe("Election", async function () {
       await expect(
         election.createElection(
           [], // Empty candidates array
+          [], // Empty names array
           startTime,
           endTime
         )
       ).to.be.revertedWith("Must have at least one candidate");
+    });
+
+    it("Should not create an election with mismatched names and addresses", async function () {
+      const { election } = await loadFixture(deployElectionFixture);
+
+      const startTime = getTimestamp(new Date()) + 3600;
+      const endTime = startTime + 86400;
+
+      await expect(
+        election.createElection(
+          ["Only One Name"],
+          [acc1.address, acc2.address],
+          startTime,
+          endTime
+        )
+      ).to.be.revertedWith("Names and addresses length mismatch");
     });
   });
 
@@ -278,7 +340,12 @@ describe("Election", async function () {
       const startTime = getTimestamp(new Date()) + 3600;
       const endTime = startTime + 86400;
 
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       await votingToken
         .connect(owner)
@@ -296,7 +363,12 @@ describe("Election", async function () {
       const startTime = getTimestamp(new Date()) + 3600;
       const endTime = startTime + 86400;
 
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       await votingToken
         .connect(owner)
@@ -319,7 +391,12 @@ describe("Election", async function () {
       const startTime = getTimestamp(new Date()) + 3600;
       const endTime = startTime + 86400;
 
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       await votingToken
         .connect(owner)
@@ -351,7 +428,12 @@ describe("Election", async function () {
       const endTime = startTime + 86400;
 
       // Create election
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       // Register and fund multiple voters
       const voters = [acc1, acc2, acc3];
@@ -394,7 +476,12 @@ describe("Election", async function () {
       const startTime = getTimestamp(new Date()) + 3600;
       const endTime = startTime + 86400;
 
-      await election.createElection(CANDIDATE_ADDRESSES, startTime, endTime);
+      await election.createElection(
+        CANDIDATE_NAMES,
+        CANDIDATE_ADDRESSES,
+        startTime,
+        endTime
+      );
 
       await votingToken
         .connect(owner)

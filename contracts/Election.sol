@@ -12,6 +12,7 @@ contract Election is
     ReentrancyGuardUpgradeable
 {
     struct Candidate {
+        string name;
         address candidateAddress;
         address[] voters;
     }
@@ -62,6 +63,7 @@ contract Election is
     }
 
     function createElection(
+        string[] memory candidateNames,
         address[] memory candidateAddresses,
         uint256 startTime,
         uint256 endTime
@@ -75,12 +77,17 @@ contract Election is
             candidateAddresses.length > 0,
             "Must have at least one candidate"
         );
+        require(
+            candidateNames.length == candidateAddresses.length,
+            "Names and addresses length mismatch"
+        );
 
         for (uint i = 0; i < candidateAddresses.length; i++) {
             require(
                 candidateAddresses[i] != address(0),
                 "Invalid candidate address"
             );
+            require(bytes(candidateNames[i]).length > 0, "Empty candidate name");
             for (uint j = i + 1; j < candidateAddresses.length; j++) {
                 require(
                     candidateAddresses[i] != candidateAddresses[j],
@@ -99,6 +106,7 @@ contract Election is
         for (uint256 i = 0; i < candidateAddresses.length; i++) {
             election.candidates.push(
                 Candidate({
+                    name: candidateNames[i],
                     candidateAddress: candidateAddresses[i],
                     voters: new address[](0)
                 })
@@ -224,7 +232,11 @@ contract Election is
     )
         external
         view
-        returns (address candidateAddress, address[] memory voters)
+        returns (
+            string memory name,
+            address candidateAddress,
+            address[] memory voters
+        )
     {
         ElectionDetails storage election = elections[electionId];
         require(
@@ -233,7 +245,7 @@ contract Election is
         );
 
         Candidate memory candidate = election.candidates[candidateIndex];
-        return (candidate.candidateAddress, candidate.voters);
+        return (candidate.name, candidate.candidateAddress, candidate.voters);
     }
 
     function isRegisteredVoter(
