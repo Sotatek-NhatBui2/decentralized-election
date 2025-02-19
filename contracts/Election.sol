@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./Vesting.sol";
 
 contract Election is
     Initializable,
@@ -33,6 +34,7 @@ contract Election is
     uint256 public requiredTokenBalance;
     uint256 public currentElectionId;
     mapping(uint256 => ElectionDetails) public elections;
+    VestingContract public vestingContract;
 
     event ElectionCreated(
         uint256 indexed electionId,
@@ -52,7 +54,8 @@ contract Election is
 
     function initialize(
         address _votingToken,
-        uint256 _requiredTokenBalance
+        uint256 _requiredTokenBalance,
+        address _vestingContract
     ) public initializer {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
@@ -60,6 +63,7 @@ contract Election is
         votingToken = IERC20(_votingToken);
         requiredTokenBalance = _requiredTokenBalance;
         currentElectionId = 0;
+        vestingContract = VestingContract(_vestingContract);
     }
 
     function createElection(
@@ -87,7 +91,10 @@ contract Election is
                 candidateAddresses[i] != address(0),
                 "Invalid candidate address"
             );
-            require(bytes(candidateNames[i]).length > 0, "Empty candidate name");
+            require(
+                bytes(candidateNames[i]).length > 0,
+                "Empty candidate name"
+            );
             for (uint j = i + 1; j < candidateAddresses.length; j++) {
                 require(
                     candidateAddresses[i] != candidateAddresses[j],
@@ -270,5 +277,50 @@ contract Election is
         );
 
         return election.candidates[candidateIndex].voters;
+    }
+
+    function createVestingSchedule(
+        uint256 electionId,
+        uint256 vestingAmount
+    ) external onlyOwner {
+        ElectionDetails storage election = elections[electionId];
+        require(election.isFinalized, "Election is not finalized");
+        require(vestingAmount > 0, "Vesting amount must be greater than 0");
+
+        // Get the winners
+        (, , uint256 winnerVotes) = getLeadingCandidate(electionId);
+        require(winnerVotes > 0, "No winner found");
+
+        // Count the number of winners
+        uint256 winnerCount = 0;
+        for (uint256 i = 0; i < election.candidates.length; i++) {
+            if (election.candidates[i].voters.length == winnerVotes) {
+                winnerCount++;
+            }
+        }
+
+        address[] memory benificiaryAddress = new address[](winnerCount);
+
+        // Get the winners
+        uint256 winnerIndex = 0;
+        for (uint256 i = 0; i < election.candidates.length; i++) {
+            if (election.candidates[i].voters.length == winnerVotes) {
+                benificiaryAddress[winnerIndex] = election
+                    .candidates[i]
+                    .candidateAddress;
+                winnerIndex++;
+            }
+        }
+
+        // Create a vesting schedule for each winner
+        for (uint256 i = 0; i < winnerCount; i++) {
+            vestingContract.createVestingSchedule(
+                benificiaryAddress[i],
+                vestingAmount / winnerCount
+            );
+        }
+
+        // Send tokens to vesting contract
+        votingToken.transfer(address(vestingContract), vestingAmount);
     }
 }
